@@ -8,19 +8,54 @@
 		},
 		onLaunch: function() {
 			let info = uni.getSystemInfoSync()
-			// 转成 upx，因为两边边距设置为 30upx
-			let width = info.windowWidth * info.pixelRatio - 60
-			let height = width / config.bannerRatio
-			info.bannerWidth = width / info.pixelRatio
-			info.bannerHeight = height / info.pixelRatio
+			info.versionCode = 0
+			info.version = "v1.0.0"
+
+			// #ifdef APP-PLUS
+			// 查询版本信息
+			plus.runtime.getProperty(plus.runtime.appid, function(wgtInfo) {
+				info.versionCode = wgtInfo.versionCode
+				info.version = wgtInfo.version
+
+				// 如果是Android平台，则检测是否有新版本
+				if (String(info.platform).toLowerCase() == "android") {
+					if (config.debug) console.log("request version api", config.api.lastestVersion)
+					util.request(config.api.lastestVersion).then(function(res) {
+						if (config.debug) console.log("latest version:", res)
+						if (res && res.data && res.data.version) {
+							if (config.debug) console.log("当前版本", info.versionCode, "最新版本", res.data.version)
+							if (info.versionCode < res.data.version) {
+								uni.showModal({
+									title: "高能预警",
+									content: "发现新版本APP，您是否要升级体验？",
+									cancelText: "暂时忽略",
+									confirmText: "码上升级",
+									success: (action) => {
+										if (action.confirm) {
+											if (config.debug) console.log('用户点击确定');
+											plus.runtime.openURL(res.data.url)
+										} else if (res.cancel) {
+											if (config.debug) console.log('用户点击取消');
+										}
+									}
+								})
+							}
+						}
+					}).catch(function(e) {
+						console.log(e)
+					})
+				}
+			});
+			// #endif
+
 			if (config.debug) console.log(info)
 			util.setSysInfo(info)
 		},
 		onShow: function() {
-			if(config.debug) console.log('App Show')
+			if (config.debug) console.log('App Show')
 		},
 		onHide: function() {
-			if(config.debug) console.log('App Hide')
+			if (config.debug) console.log('App Hide')
 		}
 	}
 </script>

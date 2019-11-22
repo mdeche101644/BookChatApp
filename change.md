@@ -1,0 +1,25 @@
+## BookChatApp v1.2.0
+- [x] 平板适配页面
+	- [x] 目录页            /pages/menu/menu
+	- [x] 书籍阅读页         /pages/read/read
+	- [x] 用户中心页         /pages/ucenter/ucenter
+	- [x] 首页              /pages/index/index
+	- [x] 分类页            /pages/cate/cate
+	- [x] 书架页            /pages/bookshelf/bookshelf
+	- [x] 列表页            /pages/list/list
+	- [x] 个人主页          /pages/me/me
+	- [x] 书签页            /pages/bookmarks/bookmarks
+	- [x] 搜索结果页         /pages/search/search
+	- [x] 内容点评页         /pages/comment/comment
+	- [x] 404页            /pages/notfound/notfound
+	- [x] 登录页            /pages/login/login
+	- [x] 注册页            /pages/register/register
+	- [x] 书籍介绍页         /pages/intro/intro
+- [x] 平板适配微调
+	- [x] `tab` 内边距太大
+	- [x] 书架中书籍名称行高太大
+	- [x] 搜索输入框优化
+- [x] 内容阅读页面代码块显示优化
+- [x] Banner 等HTTP链接允许外部打开
+- [x] APP版本升级提示（仅针对Android，iOS有App Store，不需要升级提示） 
+- [x] 书架，长按可以将书籍从书架中移除

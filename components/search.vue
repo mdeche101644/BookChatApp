@@ -78,30 +78,54 @@
 		box-sizing: border-box;
 		width: 100%;
 		background-color: #f8f8f8;
-		line-height: 45px;
-		height: 45px;
+		line-height: 90upx;
+		height: 90upx;
+		margin-top: 0;
 		display: block;
 		font-size: 15px;
-		border-radius: 5px;
+		border-radius: 10upx;
 		text-align: left;
-		vertical-align: middle;
-		padding: 10px 65px 15px 13px;
+		padding: 0 130upx 0 26upx;
 	}
 
 
 	form image {
+		margin: 0;
 		position: absolute;
 		top: 0;
 		right: 0;
 		box-sizing: border-box;
-		height: 45px;
-		width: 45px;
-		padding: 10px;
+		height: 90upx;
+		width: 90upx;
+		padding: 20upx 20upx;
 		z-index: 99;
 	}
 
 	form image.clear {
-		right: 30px;
+		right: 70upx;
 		z-index: 88;
+	}
+	@media (min-width: 768px) {
+		form input {
+			line-height: 45upx;
+			height: 45upx;
+			border-radius: 5upx;
+			font-size: 17px;
+			padding: 0 65upx 0 13upx;
+		}
+		
+		
+		form image {
+			height: 45upx;
+			width: 45upx;
+			padding: 10upx;
+		}
+		
+		form image.clear {
+			right: 45upx;
+		}
+		form image {
+			top: 5upx;
+		}
 	}
 </style>
