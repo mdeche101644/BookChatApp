@@ -1,12 +1,13 @@
 <template>
 	<view class="comment">
+		<iheader title="点评"></iheader>
 		<form @submit="submit">
 			<textarea name="content" class='font-lv3 color-semi' placeholder="您的点评能帮助其他小伙伴了解内容哟" auto-focus />
 			<view v-show="false">
 				<input type="number" name="score" :value="score" />
 				<input type="text" name="identify" :value="identify" />
 			</view>
-			<view class='comment-score mgt-30upx'>
+			<view class='comment-score mgt-30'>
 		  <text class='font-lv3'>书籍评分</text>
 		  <image data-score="1" @click='touchStar' :src='score > 0 ? "../../static/images/star-highlight.png":"../../static/images/star.png"'></image>
 		  <image data-score="2" @click='touchStar' :src='score > 1 ? "../../static/images/star-highlight.png":"../../static/images/star.png"'></image>
@@ -28,7 +29,12 @@
 	import util from '../../utils/util.js'
 	import api from '../../utils/api.js'
 	
+	import iheader from '../../components/header.vue'
+	
 	export default {
+		components: {
+			iheader
+		},
 		data() {
 			return {
 				beforeScore: 0,
@@ -56,15 +62,10 @@
 		},
 		methods: {
 			submit(e) {
-				
 				if (config.debug) console.log("submit", e)
-				
 			    let that = this
-				
 				let obj = e.detail.value
-				
 			    if (that.loading) return
-				
 			    if (obj.score == 0) {
 					util.toastError('忘了打个分？')
 					return
@@ -76,7 +77,6 @@
 			    }
 			
 			    that.loading = true
-			
 			    util.request(config.api.comment, obj, 'POST').then(function(res) {
 			      if (config.debug) console.log(config.api.comment, res)
 			      uni.showToast({

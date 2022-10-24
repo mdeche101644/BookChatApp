@@ -1,26 +1,35 @@
 <template>
-	<view class='bookmarks base-padding font-lv3 color-grey'>
-		<view v-if="bookmarks.length>0" v-for="(bookmark, index) in bookmarks" :key="index" class='row'>
-			<view class='col-11'>
-				<navigator :url='"/pages/read/read?identify="+ bookmark.book_id +"/"+ bookmark.doc_id'>
-					<text class='color-grey'>[ {{bookmark.created_at}} ]</text>
-					<text>{{bookmark.title}}</text>
-				</navigator>
+	<view>
+		<iheader title="书签"></iheader>
+		<view class='bookmarks base-padding font-lv3 color-grey'>
+			<view v-if="bookmarks.length>0" v-for="(bookmark, index) in bookmarks" :key="index" class='row'>
+				<view class='col-11'>
+					<navigator :url='"/pages/read/read?identify="+ bookmark.book_id +"/"+ bookmark.doc_id'>
+						<text class='color-grey'>[ {{bookmark.created_at}} ]</text>
+						<text>{{bookmark.title}}</text>
+					</navigator>
+				</view>
+				<view @click='delBookmark' :data-id="bookmark.doc_id" class='col-1 recycle'>
+					<image src='../../static/images/recycle.png'></image>
+				</view>
 			</view>
-			<view @click='delBookmark' :data-id="bookmark.doc_id" class='col-1 recycle'>
-				<image src='../../static/images/recycle.png'></image>
-			</view>
+			<view class='font-lv3 mgt-30 color-grey text-center pdt-30'>{{tips}}</view>
 		</view>
-		<view class='font-lv3 mgt-30upx color-grey text-center pdt-30upx'>{{tips}}</view>
 	</view>
+	
 </template>
 
 <script>
+	import iheader from '../../components/header.vue'
+	
 	import config from '../../config.js'
 	import util from '../../utils/util.js'
 	import api from '../../utils/api.js'
 
 	export default {
+		components:{
+			iheader
+		},
 		data() {
 			return {
 				bookmarks: [],
@@ -29,17 +38,22 @@
 			}
 		},
 		onLoad: function(op) {
+			util.loading("loading...")
 			if (config.debug) console.log("op", op)
 			if (op.identify) this.identify = op.identify
 		},
 		onShow: function() {
-			util.getToken() == '' ? this.tips = ' -- 您暂时还没有书签 -- ' : this.loadBookmarks()
+			let user = util.getUser()
+			let isLogin = true
+			if (user == undefined || user.token == undefined || user.uid <= 0) {
+				isLogin = false
+			}
+			isLogin ? this.tips = ' -- 您暂时还没有书签 -- ' : this.loadBookmarks()
 		},
 		methods: {
 			loadBookmarks: function() {
 				let that = this
 				let bookmarks = []
-				util.loading()
 				util.request(config.api.bookmark, {
 					identify: that.identify
 				}).then(function(res) {
@@ -89,7 +103,7 @@
 	}
 </script>
 
-<style>
+<style scoped>
 	.recycle image {
 		width: 20upx;
 		height: 20upx;

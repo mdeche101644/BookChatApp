@@ -1,5 +1,6 @@
 <template>
 	<view class="intro-page">
+		<iheader :title="book.book_name"></iheader>
 		<block v-if="book.book_id>0">
 			<view class='row info'>
 				<view class='col-4'>
@@ -7,22 +8,22 @@
 				</view>
 				<view class='col-8'>
 					<text class='ellipsis-2row font-lv1'>{{book.book_name}}</text>
-					<view :class='"score score-"+book.score+" mgt-30upx"'>
+					<view :class='"score score-"+book.score+" mgt-30"'>
 						<text>{{book.float_score}} 分</text>
 						<text v-if="book.lang" class='pull-right'>[ <text class='color-red'>{{book.lang}}</text> ]</text>
 					</view>
-					<navigator :url='"/pages/ucenter/ucenter?uid="+book.uid' class='mgt-15upx font-lv3 color-semi'>
+					<navigator :url='"/pages/ucenter/ucenter?uid="+book.uid' class='mgt-15 font-lv3 color-semi'>
 						<image class='icon-avatar' src='../../static/images/me.png'></image>
 						<text>{{book.user}}</text>
 					</navigator>
-					<view class='progress mgt-30upx'>
+					<view class='progress mgt-30'>
 						<view class='font-lv3 color-grey'>阅读进度
 							<view class='pull-right'>
 								<text>{{book.percent}}%</text>
 								<text v-if="isLogin == false">(未登录)</text>
 							</view>
 						</view>
-						<progress class='mgt-15upx' :percent="book.percent" />
+						<progress class='mgt-15' :percent="book.percent" />
 					</view>
 				</view>
 			</view>
@@ -43,10 +44,14 @@
 					</view>
 				</view>
 			</view>
-
 			<view class='intro font-lv3 color-grey'>
 				<text>{{book.description}}</text>
-				<view v-if="book.author" class='ellipsis-1row font-lv4'>来源: {{book.author}} - {{book.author_url}}</view>
+				<view v-if="book.tags.length > 0" class="tags">
+					<block v-for="tag in book.tags" :key="tag">
+						<navigator class="color-link radius-basic font-lv3" :url="'../search/search?wd='+tag">{{tag}}</navigator>
+					</block>
+				</view>
+				<view v-if="book.author" class='ellipsis-1row font-lv4 source'>来源: {{book.author}} - {{book.author_url}}</view>
 			</view>
 			<navigator :url='"/pages/menu/menu?identify="+book.book_id' class='menu row'>
 				<view class='col font-lv3'>查看目录</view>
@@ -54,9 +59,16 @@
 			</navigator>
 		</block>
 
+		<!-- showAd: 内容加载完成再显示广告，避免广告先于内容显示 -->
+		<!-- #ifdef MP-WEIXIN -->
+		<view v-if="showAd && !adClosed" :style="adLoaded ? 'border-bottom: 10rpx solid #efefef' : ''">
+			<ad @load="adLoad" @close="adClose" :unit-id="bannerAdUnitId" ad-intervals="30"></ad>
+		</view>
+		<!-- #endif -->
+
 		<view v-if="relatedBooks.length>0" class='panel related-books'>
 			<view class='panel-heading base-padding'>
-				<view class='panel-title pdt-30upx strong font-lv2'>相关书籍</view>
+				<view class='panel-title pdt-30 strong font-lv2'>相关书籍</view>
 			</view>
 			<view class='panel-body base-padding'>
 				<scroll-book :books="relatedBooks" :width="scrollWidth" />
@@ -65,7 +77,7 @@
 
 		<view v-if="book.book_id>0" class='panel comments'>
 			<view class='panel-heading base-padding'>
-				<view class='panel-title pdt-30upx strong font-lv2'>书友点评</view>
+				<view class='panel-title pdt-30 strong font-lv2'>书友点评</view>
 			</view>
 			<view class='panel-body base-padding'>
 				<block v-if="comments.length>0">
@@ -83,7 +95,7 @@
 									<view class='pull-right font-lv4 color-grey'>{{comment.created_at}}</view>
 								</view>
 							</view>
-							<view class='row comment-content color-grey font-lv3 mgt-15upx'>{{comment.content}}</view>
+							<view class='row comment-content color-grey font-lv3 mgt-15'>{{comment.content}}</view>
 						</view>
 					</view>
 				</block>
@@ -130,12 +142,17 @@
 
 <script>
 	import scrollBook from '../../components/scrollBook.vue'
+	import iheader from '../../components/header.vue'
 
 	import util from '../../utils/util.js'
 	import api from '../../utils/api.js'
 	import config from '../../config.js'
 
 	export default {
+		components: {
+			iheader,
+			scrollBook,
+		},
 		data() {
 			return {
 				bookId: 0,
@@ -146,13 +163,17 @@
 				size: 10,
 				myScore: 0,
 				comments: [],
+				tags: ['Hello', 'World'],
 				scrollWidth: util.getSysInfo().bannerWidth + "px",
+				showAd: false,
+				adLoaded: false,
+				adClosed: false,
+				bannerAdUnitId: config.bannerAdUnitId,
 			}
 		},
-		components: {
-			scrollBook
-		},
 		onLoad(options) {
+			util.loading("loading...")
+
 			let id = options.id || options.scene
 
 			if (config.debug) console.log(options, id)
@@ -173,9 +194,19 @@
 		onShow() {
 			this.isLogin = util.getToken() != ""
 		},
+		onShareAppMessage: function() {
+			uni.showShareMenu({
+				withShareTicket: true
+			})
+		},
 		methods: {
+			adLoad() {
+				this.adLoaded = true
+			},
+			adClose() {
+				this.adClosed = true
+			},
 			loadData: function() {
-
 				let that = this
 				let book = {}
 				let books = []
@@ -207,6 +238,7 @@
 				}).catch(function(e) {
 					util.toastError(e.data.message || e.errMsg)
 				}).finally(function() {
+					uni.hideLoading()
 					if (book.book_id <= 0) {
 						uni.redirectTo({
 							url: '/pages/notfound/notfound',
@@ -217,6 +249,7 @@
 					book.float_score = (book.score / 10).toFixed(1)
 					book.description = book.description || book.book_name
 					book.percent = Number(book.cnt_readed / book.cnt_doc * 100).toFixed(2)
+					book.tags = book.tags == undefined ? [] : book.tags.split(',')
 					that.book = book
 					that.relatedBooks = books
 					that.page = 1
@@ -225,6 +258,7 @@
 					})
 					uni.stopPullDownRefresh()
 					that.getComments()
+					that.showAd = that.bannerAdUnitId != ''
 				})
 			},
 			getComments: function() {
@@ -322,9 +356,11 @@
 					uni.showToast({
 						title: book.is_star ? '收藏书籍成功' : '移除收藏成功',
 					})
-					getApp().globalData.bookshelfChanged = true
+					let sysInfo = util.getSysInfo()
+					sysInfo.bookshelfChanged = true
+					util.setSysInfo(sysInfo)
 				}).catch(function(e) {
-					util.toastError(e.message || e.errMsg)
+					util.toastError(e.data.message || e.errMsg)
 				})
 			},
 
@@ -341,32 +377,33 @@
 
 	.cate-row .font-lv3 {
 		display: inline-block;
-		margin-right: 30upx;
+		margin-right: 15px;
 	}
 
 	.icon-avatar {
-		width: 38upx;
-		height: 38upx;
+		width: 19px;
+		height: 19px;
 		position: relative;
-		top: 6upx;
+		top: 3px;
 	}
 
 	.info {
-		padding: 30upx;
+		padding: 15px;
 	}
 
 	.info .cover {
-		width: 230upx;
-		height: 302.3upx;
+		width: 115px;
+		max-width: 100%;
+		height: 151px;
 	}
 
 	.title {
-		margin-bottom: 15upx;
-		min-height: 80upx;
+		margin-bottom: 8px;
+		min-height: 40px;
 	}
 
 	.info .col-8 {
-		padding-left: 30upx;
+		padding-left: 15px;
 		box-sizing: border-box;
 	}
 
@@ -376,18 +413,18 @@
 	}
 
 	.data {
-		margin-bottom: 30upx;
-		padding: 0upx 30upx;
+		margin-bottom: 15px;
+		padding: 0upx 15px;
 	}
 
 	.data>view {
 		border-bottom: 1px solid #efefef;
-		padding-bottom: 30upx;
+		padding-bottom: 15px;
 	}
 
 	.data .col {
 		text-align: center;
-		font-size: 28upx;
+		font-size: 14px;
 	}
 
 	.data .col:nth-of-type(2n) {
@@ -406,13 +443,13 @@
 	}
 
 	.btns {
-		padding: 0upx 15upx 30upx;
-		border-bottom: 10upx solid #efefef;
+		padding: 0upx 8px 15px;
+		border-bottom: 5px solid #efefef;
 	}
 
 	.btns .col {
 		justify-content: space-between;
-		padding: 0upx 15upx;
+		padding: 0upx 8px;
 		box-sizing: border-box;
 	}
 
@@ -420,66 +457,75 @@
 		background-color: #efefef;
 		text-align: center;
 		margin: 0px auto;
-		padding: 8upx 0upx;
-		border-radius: 10upx;
+		padding: 4px 0;
+		border-radius: 5px;
 	}
 
 	/*  书籍介绍  */
 
 	.intro {
 		border-bottom: 1px solid #efefef;
-		padding: 30upx;
-		padding-top: 0upx;
+		padding: 15px;
+		padding-top: 0;
 		line-height: 180%;
-		text-indent: 2em;
+	}
+
+	.intro .tags navigator {
+		display: inline-block;
+		padding: 2px 13px;
+		background-color: #F6F6F6;
+		margin-right: 8px;
+		margin-top: 6px;
+		margin-bottom: 2px;
+		font-size: 13px !important;
 	}
 
 	.intro .ellipsis-1row {
 		word-break: break-all;
-		padding-top: 10upx;
+		padding-top: 5px;
 		/* font-size: 26upx; */
-		margin-bottom: -10upx;
+		margin-bottom: -5px;
 		color: #aaa;
 	}
 
 	/*  目录入口  */
 
 	.menu {
-		padding: 30upx;
-		font-size: 28upx;
-		border-bottom: 10upx solid #efefef;
+		padding: 15px;
+		font-size: 14px;
+		border-bottom: 5px solid #efefef;
 	}
 
 	.user image {
-		width: 36upx;
-		height: 36upx;
+		width: 18px;
+		height: 18px;
 		display: inline-block;
-		margin-right: 10upx;
+		margin-right: 5px;
 	}
 
 	.user image.clock {
-		margin-left: 30upx;
-		width: 26upx;
-		height: 26upx;
+		margin-left: 15px;
+		width: 13px;
+		height: 13px;
 		position: relative;
-		top: -5upx;
+		top: -3px;
 	}
 
 	.related-books {
-		border-bottom: 10upx solid #efefef;
-		padding-bottom: 30upx;
+		border-bottom: 5px solid #efefef;
+		padding-bottom: 15px;
 	}
 
 	.related-books .panel-heading {
 		border-bottom: 1px solid #efefef;
-		padding-bottom: 30upx;
+		padding-bottom: 15px;
 	}
 
 	.user .text-muted {
 		display: inline-block;
 		position: relative;
-		top: -7upx;
-		margin-left: 6upx;
+		top: -4px;
+		margin-left: 3px;
 	}
 
 	/* fix bottom  */
@@ -490,7 +536,8 @@
 		width: 100%;
 		text-align: center;
 		background-color: #fff;
-		box-shadow: 0upx 0upx 10upx #ddd;
+		/* box-shadow: 0upx 0upx 10upx #ddd; */
+		border-top: 1px solid rgb(213, 213, 213);
 		height: 48px;
 	}
 
@@ -548,11 +595,11 @@
 
 	.comments .panel-heading {
 		border-bottom: 1px solid #efefef;
-		padding-bottom: 30upx;
+		padding-bottom: 15px;
 	}
 
 	.comment-info {
-		margin-bottom: 20upx;
+		margin-bottom: 10px;
 	}
 
 	.comment-info .score {
@@ -561,23 +608,24 @@
 	}
 
 	.comment-info .pull-right {
-		margin-top: 5upx;
+		margin-top: 3px;
 	}
 
 	.comment-right {
-		padding-left: 30upx;
+		padding-left: 15px;
 		box-sizing: border-box;
 	}
 
 	.comment-list {
 		border-bottom: 1upx solid #efefef;
-		padding-bottom: 30upx;
-		margin-bottom: 40upx;
+		padding-bottom: 15px;
+		margin-bottom: 20px;
 	}
 
 	.comment-list image {
-		width: 120upx;
-		height: 120upx;
+		width: 60px;
+		height: 60px;
+		max-width: 100%;
 	}
 
 	.hor {
@@ -587,17 +635,18 @@
 	}
 
 	.hor navigator {
-		width: 170upx;
-		margin: 3upx 15upx;
+		width: 85px;
+		margin: 2px 8px;
 	}
 
 	.hor navigator:first-of-type {
-		margin-left: 3upx;
+		margin-left: 2px;
 	}
 
 	.hor navigator image {
-		width: 170upx;
-		height: 223.5upx;
+		width: 85px;
+		height: 112px;
+		max-width: 100%;
 	}
 
 	.info navigator text {
@@ -609,6 +658,14 @@
 			max-width: 23px;
 			max-height: 23px;
 			margin-right: 5px;
+		}
+		.hor navigator image {
+			width: 170px;
+			height: 223.5px;
+		}
+		.info .cover {
+			width: 170px;
+			height: 223.5px;
 		}
 	}
 </style>

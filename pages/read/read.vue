@@ -1,14 +1,36 @@
 <template>
 	<view class="page">
+		<iheader :title="book.book_name"></iheader>
 		<view @click='pageClick' :class='"bg-theme"+setting.themeIndex' :style='"min-height:"+(sys.screenHeight - sys.statusBarHeight - 55)+"px"'>
 			<view :class='"markdown-body editormd-preview-container bg-theme"+setting.themeIndex' :style='"line-height:1.8;font-size:"+fontIndexs[setting.fontIndex]'>
 				<view class='title font-lv1 text-center'>{{article.title}}</view>
-				<rich-text :nodes="nodes"></rich-text>
+				<block v-for="(node, idx) of nodes" :key='idx'>
+					<block v-if="node.type == 'img'">
+						<image @click="imgPreview" :src="node['src']" :data-src="node['src']" mode="aspectFit"></image>
+					</block>
+					<block v-else-if="node.type == 'audio'">
+						<!-- #ifdef MP-WEIXIN -->
+						<imt-audio :src="node['src']" :title="node['text']"></imt-audio>
+						<!-- #endif -->
+						<!-- #ifndef MP-WEIXIN -->
+						<audio :src="node['src']" :poster="node['poster']" :name="node['text']" controls></audio>
+						<!-- #endif -->
+					</block>
+					<block v-else-if="node.type == 'video'">
+						<video :src="node['src']" :poster="node['poster']" :name="node['text']" controls></video>
+					</block>
+					<block v-else-if="node.type == 'iframe'">
+						<web-view :src="node['src']"></web-view>
+					</block>
+					<block v-else-if="node.type == 'richtext'">
+						<rich-text :nodes="node.data"></rich-text>
+					</block>
+				</block>
 			</view>
 		</view>
 
 		<view :class='"drawer drawer-left " + [showMenu ? "show":""]'>
-			<view class='drawer-content' style='padding-bottom: 70px'>
+			<view class='drawer-content' :style="'padding-bottom: 70px;'+menuStyle">
 				<imenu :book="book" :currentDocId="article.id" :wd="wd" :menu="menuTree" :result="result" :tips="tips" @search="search"
 				 @clear="clear" @itemClick="itemClick" />
 			</view>
@@ -99,23 +121,23 @@
 				</view>
 			</view>
 		</view>
-
-
 	</view>
 </template>
 
 <script>
-	import '../../static/css/markdown.css'
-
 	import util from '../../utils/util.js'
 	import api from '../../utils/api.js'
 	import config from '../../config.js'
 
 	import imenu from '../../components/menu.vue'
+	import iheader from '../../components/header.vue'
+	import imtAudio from '../../components/imt-audio.vue'
 
 	export default {
 		components: {
 			imenu,
+			iheader,
+			imtAudio,
 		},
 		data() {
 			return {
@@ -131,14 +153,16 @@
 				preDisable: false,
 				nextDisable: false,
 				identify: '',
+				menuStyle: '',
 				wd: '', //搜索关键字
+				audios: [],
 				setting: {
 					themeIndex: 0,
 					fontIndex: 0,
 				},
 				defautScreenBrightness: 0,
 				screenBrightness: 0,
-				fontIndexs: util.getSysInfo().windowWidth >= 768 ? ['16px', '17px', '18px', '19px', '20px', '21px', '22px'] : [
+				fontIndexs: util.getSysInfo().windowWidth >= 768 ? ['15px', '16px', '17px', '18px', '19px', '20px', '21px'] : [
 					'14px', '15px', '16px', '17px', '18px', '19px', '20px'
 				],
 				tips: '',
@@ -170,11 +194,7 @@
 			}
 
 			that.initReaderSetting()
-
-			util.loading()
-
 			let latestReadId = 0
-
 			Promise.all([util.request(config.api.bookMenu, {
 				identify: arr[0]
 			}), util.request(config.api.bookInfo, {
@@ -204,14 +224,12 @@
 				}
 
 				let menuTree = util.menuToTree(menu)
-				let app = getApp().globalData
-
+				let sysInfo = util.getSysInfo()
+				let paddingTop = sysInfo.titleBarHeight + sysInfo.statusBarHeight
+				that.menuStyle = `padding-top: ${paddingTop}px;`
 				that.menuSortIds = util.menuSortIds(menuTree)
 				that.menuTree = menuTree
 				that.book = book
-				uni.setNavigationBarTitle({
-					title: book.book_name
-				})
 				if (arr.length != 2) {
 					if (latestReadId > 0) {
 						identify = book.book_id + "/" + latestReadId
@@ -235,11 +253,13 @@
 		},
 		methods: {
 			getArticle: function(identify) {
+				util.loading("loading...")
 				let article = {}
 				let that = this
 				let params = {
 					identify: identify,
-					'from-app': true
+					// 'from-app': true,
+					'enhance-richtext': true,
 				}
 
 				util.request(config.api.read, params).then(function(res) {
@@ -252,26 +272,8 @@
 				}).finally(function() {
 					let nextDisable = that.menuSortIds.indexOf(article.id) + 1 == that.menuSortIds.length
 					let preDisable = that.menuSortIds.indexOf(article.id) == 0
-
 					if (!article.content) article.content = []
-
-					// #ifndef APP-PLUS
-					if (config.debug) console.log("article", article.content)
-					// #endif
-
-					let nodes = [{
-						"name": "img",
-						"attrs": {
-							"src": that.setting.themeIndex == 3 ? "./static/images/loading-white.png" : "./static/images/loading.png",
-							"style": "display:block;margin:200px auto;"
-						}
-					}]
-
-					// #ifndef APP-PLUS
-					nodes = article.content
-					// #endif
-
-					that.nodes = nodes
+					that.nodes = []
 					that.article = article
 					that.identify = identify
 					that.showMenu = false
@@ -280,18 +282,34 @@
 					that.preDisable = preDisable
 					that.menuTree = util.menuTreeReaded(that.menuTree, article.id)
 
-					uni.hideLoading()
-
-					// #ifndef APP-PLUS
-					uni.pageScrollTo({
-						scrollTop: 0,
-						duration: 300
-					});
-					// #endif
-
-					// #ifdef APP-PLUS
-					that.renderContent(article.content)
-					// #endif
+					setTimeout(function() {
+						that.nodes = article.content.filter((node, idx) => {
+							if (node.type == "img" || node.type == "iframe") {
+								try {
+									node["src"] = node.data[0].attrs['src']
+								} catch (e) {
+									console.log(e)
+									return false
+								}
+							} else if (node.type == "audio" || node.type == "video") {
+								try {
+									node["src"] = node.data[0].attrs['src']
+									node["poster"] = node.data[0].attrs['poster']
+									node["text"] = node.data[0].children[0]['text']
+									node["id"] = "id" + idx
+								} catch (e) {
+									console.log(e)
+									return false
+								}
+							}
+							return true
+						})
+						uni.pageScrollTo({
+							scrollTop: 0,
+							duration: 100
+						});
+						uni.hideLoading()
+					}, 10)
 				})
 			},
 			pageClick: function(e) {
@@ -307,15 +325,18 @@
 				this.showMore = !this.showMore
 				this.showMenu = false
 			},
+			imgPreview: function(e) {
+				if (config.debug) console.log("imgPreview", e)
+				uni.previewImage({
+					urls: [e.currentTarget.dataset.src]
+				})
+			},
 			clickNext: function() {
 				let that = this
 				let idx = that.menuSortIds.indexOf(that.article.id)
 				idx++
 				that.nextDisable = true
 				if (idx < that.menuSortIds.length) {
-					// #ifdef MP
-					util.loading('加载下一章节...')
-					// #endif
 					that.getArticle(that.book.book_id + "/" + that.menuSortIds[idx])
 				} else {
 					uni.showToast({
@@ -331,9 +352,6 @@
 				that.preDisable = true
 				idx--
 				if (idx > -1) {
-					// #ifdef MP
-					util.loading('加载上一章节...')
-					// #endif
 					that.getArticle(that.book.book_id + "/" + that.menuSortIds[idx])
 				} else {
 					uni.showToast({
@@ -344,7 +362,6 @@
 				}
 			},
 			itemClick: function(e) {
-				util.loading()
 				this.getArticle(e.identify)
 			},
 			search: function(e) {
@@ -443,9 +460,10 @@
 			},
 			setBrightnessScreen: function(e) {
 				if (config.debug) console.log(e)
-				this.screenBrightness = e.detail.value
+				let screenBrightness = parseFloat(e.detail.value).toFixed(1)
+				this.screenBrightness = screenBrightness
 				uni.setScreenBrightness({
-					value: e.detail.value,
+					value: screenBrightness,
 				})
 			},
 			initReaderSetting: function() {
@@ -471,6 +489,9 @@
 				}
 				this.setting = setting
 				this.screenBrightness = this.defautScreenBrightness
+				uni.setScreenBrightness({
+					value: this.defautScreenBrightness
+				})
 				util.setReaderSetting(setting)
 			},
 			_clickBookmark: function(action) {
@@ -494,6 +515,8 @@
 </script>
 
 <style>
+	@import url("../../static/css/markdown.css");
+
 	.page,
 	page {
 		min-height: 100%;
@@ -502,21 +525,21 @@
 	.title {
 		line-height: 1.6;
 		border-bottom: 1px solid #efefef;
-		padding: 0 0 30upx;
-		margin-bottom: 30upx;
+		padding: 0 0 15px;
+		margin-bottom: 15px;
 	}
 
 	.markdown-body {
 		transition: all 0.5s;
-		padding: 30upx 30upx 120upx;
+		padding: 15px 15px 60px;
 		box-sizing: border-box;
 	}
 
 	/* footer */
 
 	.footer {
-		box-shadow: 0 0 5px #efefef;
-		border-top: 1px solid #efefef;
+		/* box-shadow: 0 0 5px #efefef; */
+		border-top: 1px solid rgb(213, 213, 213);
 		position: fixed;
 		height: 48px;
 		line-height: 48px;
@@ -557,7 +580,7 @@
 	.drawer .drawer-content {
 		width: 100%;
 		box-sizing: border-box;
-		padding-bottom: 120upx;
+		padding-bottom: 60px;
 	}
 
 	.drawer-left {
@@ -658,12 +681,22 @@
 		.drawer {
 			width: 65%;
 		}
+
 		.drawer-left.show {
 			right: 35%;
 		}
-		
+
 		.drawer-right.show {
 			left: 35%;
 		}
+	}
+
+	.markdown-body image {
+		max-width: 100% !important;
+	}
+
+	.markdown-body audio,
+	.markdown-body video {
+		max-width: 100%;
 	}
 </style>

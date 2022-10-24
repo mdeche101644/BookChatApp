@@ -1,24 +1,26 @@
 <template>
 	<view>
-		<view class='base-padding row user mgt-15upx'>
+		<iheader title="我的"></iheader>
+		<view class='base-padding row user mgt-15'>
 			<image :src='user.avatar'></image>
 			<view class='username font-lv2'>{{user.nickname}}</view>
 			<view class='color-grey font-lv3'>{{user.intro}}</view>
 		</view>
 
-		<view class='pdb-30upx pdt-30upx'>
+		<view class='pdb-30 pdt-30'>
 			<tab @tabClick="tabClick" :tabs="tabs" :tabGridLen="10" :activeTab="tabValue" />
 		</view>
 
 
-		<view v-if="(tabValue == 'release' || tabValue == 'star') && lists.length>0" class='list base-padding base-margin-bottom'>
+		<view v-if="(tabValue == 'release' || tabValue == 'star') && lists.length>0"
+			class='list base-padding base-margin-bottom'>
 			<block v-for="(book, index) in lists" :key='index'>
 				<view class='row'>
 					<navigator :url='"/pages/intro/intro?id="+book.book_id' class='col-3'>
 						<image lazy-load='true' class='box-shadow cover' :src='book.cover' />
 					</navigator>
 					<navigator :url='"/pages/intro/intro?id="+book.book_id' class='col-9'>
-						<view class='font-lv1 mgb-15upx ellipsis-1row'>{{book.book_name}}</view>
+						<view class='font-lv1 mgb-15 ellipsis-1row'>{{book.book_name}}</view>
 						<view class='font-lv4 color-light info'>
 							<view class='col'>
 								<image src='../../static/images/eye.png'></image>
@@ -37,7 +39,8 @@
 								<text> {{book.star}} 收藏</text>
 							</view>
 						</view>
-						<view class='font-lv3 color-grey ellipsis-2row'>{{book.description ? book.description : book.book_name}}</view>
+						<view class='font-lv3 color-grey ellipsis-2row'>
+							{{book.description ? book.description : book.book_name}}</view>
 					</navigator>
 				</view>
 			</block>
@@ -66,6 +69,7 @@
 <script>
 	import tab from '../../components/tab.vue'
 	import loading from '../../components/loading.vue'
+	import iheader from '../../components/header.vue'
 
 	import config from '../../config.js'
 	import util from '../../utils/util.js'
@@ -75,6 +79,7 @@
 		components: {
 			tab,
 			loading,
+			iheader,
 		},
 		data() {
 			return {
@@ -100,6 +105,8 @@
 			}
 		},
 		onLoad: function(options) {
+			util.loading("loading...")
+
 			if (config.debug) console.log("params", options)
 			if (options.tab) this.tabValue = options.tab
 
@@ -191,6 +198,7 @@
 						this.getFans()
 						break;
 				}
+				uni.hideLoading()
 			},
 			getRelease: function() {
 				this._getBooks(config.api.userRelease)
@@ -304,8 +312,8 @@
 <style scoped>
 	.user {
 		text-align: center;
-		border-bottom: 10upx solid #f6f6f6;
-		padding-bottom: 30upx;
+		border-bottom: 5px solid #f6f6f6;
+		padding-bottom: 15px;
 	}
 
 	.user .text-muted {
@@ -313,12 +321,12 @@
 	}
 
 	.username {
-		margin: 15upx auto;
+		margin: 8px auto;
 	}
 
 	.user image {
-		width: 200upx;
-		height: 200upx;
+		width: 100px;
+		height: 100px;
 		border-radius: 50%;
 		border: 1px solid #ddd;
 		display: block;
@@ -335,57 +343,54 @@
 	}
 
 	.base-info image {
-		height: 40upx;
-		width: 40upx;
-		position: relative;
-		top: 8upx;
-		margin-right: 30upx;
+		height: 20px;
+		width: 20px;
+		margin-right: 15px;
 	}
 
 	.base-info image.pull-right {
-		margin-right: 0upx;
+		margin-right: 0;
 	}
 
 	.base-info {
-		padding-top: 0upx;
-		padding-bottom: 0upx;
+		padding-top: 0;
+		padding-bottom: 0;
 	}
 
 	.base-info .col-12 {
 		border-bottom: 1px solid #f6f6f6;
-		padding-bottom: 30upx;
-		padding-top: 30upx;
+		padding-bottom: 15px;
+		padding-top: 15px;
 		color: #666;
 	}
 
 	.base-info .col-12:last-of-type {
-		border-bottom: 0upx;
-		margin-bottom: 0upx;
+		border-bottom: 0;
+		margin-bottom: 0;
 	}
 
 
 
 	.list .col-9 {
 		box-sizing: border-box;
-		padding-left: 30upx;
+		padding-left: 15px;
 	}
 
 	.list .row {
-		margin-bottom: 30upx;
-		padding-bottom: 30upx;
+		margin-bottom: 15px;
+		padding-bottom: 15px;
 		border-bottom: 1upx solid #efefef;
 		display: flex;
 	}
 
 	.list .color-grey {
 		line-height: 150%;
-		text-indent: 2em;
 	}
 
 	.breadcrumb {
 		border-bottom: 1upx solid #ddd;
 		line-height: 250%;
-		margin-top: 15upx;
+		margin-top: 8px;
 	}
 
 	.cover {
@@ -397,7 +402,7 @@
 		box-sizing: border-box;
 		border-bottom: 0 !important;
 		display: flex;
-		margin: 20upx 0;
+		margin: 10px 0;
 	}
 
 	.info .col {
@@ -408,10 +413,8 @@
 	}
 
 	.info image {
-		width: 24upx;
-		height: 24upx;
-		position: relative;
-		top: 4upx;
+		width: 12px;
+		height: 12px;
 	}
 
 	.info text {
@@ -419,8 +422,8 @@
 	}
 
 	.icon {
-		width: 64upx;
-		height: 64upx;
+		width: 32px;
+		height: 32px;
 		margin: 0 auto;
 		display: block;
 	}
@@ -430,12 +433,12 @@
 	}
 
 	.list-users .col-4 {
-		margin-bottom: 60upx;
+		margin-bottom: 30px;
 	}
 
 	.list-users image {
-		width: 160upx;
-		height: 160upx;
+		width: 80px;
+		height: 80px;
 		border-radius: 50%;
 		border: 1px solid #ddd;
 	}
@@ -444,7 +447,6 @@
 		.info image {
 			max-width: 18px;
 			max-height: 18px;
-			top: 3px;
 			margin-right: 6px;
 		}
 
@@ -458,6 +460,21 @@
 
 		.list .color-grey {
 			line-height: 200%;
+		}
+
+		.cover {
+			width: 170px;
+			height: 223.5px;
+		}
+		.col-4 {
+			flex: 0 0 25%;
+			max-width: 25%;
+		}
+	}
+	@media (min-width: 1000px){
+		.col-4 {
+			flex: 0 0 20%;
+			max-width: 20%;
 		}
 	}
 </style>

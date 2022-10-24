@@ -1,5 +1,6 @@
 <template>
 	<view>
+		<iheader title="没找到对象"></iheader>
 	  <view>
 	    <image src='../../static/images/404.png'></image>
 	  </view>
@@ -13,9 +14,16 @@
 </template>
 
 <script>
+	import iheader from '../../components/header.vue'
 	export default {
+		components: {
+			iheader
+		},
 		data() {
 			return {}
+		},
+		onLoad() {
+			uni.hideLoading()
 		},
 		methods: {
 			goHome: function(e) {
@@ -27,7 +35,7 @@
 	}
 </script>
 
-<style>
+<style scoped>
 image{width: 60%;margin:80upx auto;display: block;}
 text.font-lv1{font-size: 60upx !important;color: #353535;}
 text{display: block;text-align: center;color: #888888;margin: 30upx 0;}

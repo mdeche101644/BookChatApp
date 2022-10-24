@@ -1,9 +1,12 @@
 <template>
-	<form class='search'>
-		<input :focus='focus' :value='searchWd' :placeholder='placeholder' @input="change" @confirm="search" name='wd' type='text' />
-		<image @click='clear' v-if='showClear' class='clear' src='/static/images/clear.png'></image>
-		<image @click='search' src='/static/images/search.png'></image>
-	</form>
+	<view>
+		<form class='search' @click="focusSearch">
+			<input :focus='focus || clickFocus' :value='searchWd' :placeholder='placeholder' @input="change" @confirm="search" confirm-type="search"
+			 name='wd' />
+			<image @click.stop='clear' v-if='showClear' class='clear' src='/static/images/clear.png'></image>
+			<image @click.stop='search' src='/static/images/search.png'></image>
+		</form>
+	</view>
 </template>
 
 <script>
@@ -12,7 +15,8 @@
 		data() {
 			return {
 				showClear: false,
-				searchWd: ''
+				searchWd: '',
+				clickFocus: false,
 			}
 		},
 		props: {
@@ -35,7 +39,7 @@
 			this.init()
 		},
 		methods: {
-			init(){
+			init() {
 				if (this.wd) this.showClear = true
 				this.searchWd = this.wd
 			},
@@ -50,17 +54,23 @@
 				this.searchWd = wd
 			},
 			search() {
-				if(this.target){
+				this.clickFocus = false
+				if (this.target) {
 					uni.navigateTo({
-						url: this.target +"?wd="+this.searchWd
+						url: this.target + "?wd=" + this.searchWd
 					})
-				}else{
-					this.$emit('search', { wd: this.searchWd})
+				} else {
+					this.$emit('search', {
+						wd: this.searchWd
+					})
 				}
+			},
+			focusSearch(){
+				this.clickFocus=true
 			}
 		},
-		watch:{
-			wd:function(){
+		watch: {
+			wd: function() {
 				this.init()
 			}
 		}
@@ -72,20 +82,21 @@
 		margin-top: 15px;
 		position: relative;
 		display: block;
+		background-color: #f8f8f8;
+		border-radius: 5px;
+		padding-right: 70px;
+		padding-top: 8px;
+		padding-left: 15px;
+		padding-bottom: 8px;
+		height: 40px;
+		box-sizing: border-box;
 	}
 
 	form input {
-		box-sizing: border-box;
-		width: 100%;
-		background-color: #f8f8f8;
-		line-height: 90upx;
-		height: 90upx;
-		margin-top: 0;
-		display: block;
+		height: 24px;
+		line-height: 24px;
 		font-size: 15px;
-		border-radius: 10upx;
-		text-align: left;
-		padding: 0 130upx 0 26upx;
+		min-height: 24px;
 	}
 
 
@@ -95,37 +106,44 @@
 		top: 0;
 		right: 0;
 		box-sizing: border-box;
-		height: 90upx;
-		width: 90upx;
-		padding: 20upx 20upx;
+		height: 40px;
+		width: 40px;
+		padding: 8px 8px;
 		z-index: 99;
 	}
 
 	form image.clear {
-		right: 70upx;
+		right: 35px;
 		z-index: 88;
 	}
+
 	@media (min-width: 768px) {
+		form {
+			height: 50px;
+			border-radius: 5px;
+			padding-right: 70px;
+			padding-top: 10px;
+			padding-bottom: 10px;
+			padding-left: 15px;
+			box-sizing: border-box;
+		}
+
 		form input {
-			line-height: 45upx;
-			height: 45upx;
-			border-radius: 5upx;
 			font-size: 17px;
-			padding: 0 65upx 0 13upx;
+			height: 30px;
+			line-height: 30px;
+			min-height: 30px;
 		}
-		
-		
+
+
 		form image {
-			height: 45upx;
-			width: 45upx;
-			padding: 10upx;
+			height: 50px;
+			width: 50px;
+			padding: 10px 10px;
 		}
-		
+
 		form image.clear {
-			right: 45upx;
-		}
-		form image {
-			top: 5upx;
+			right: 35px;
 		}
 	}
 </style>

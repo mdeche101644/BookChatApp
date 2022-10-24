@@ -3,13 +3,38 @@
 	import util from 'utils/util.js'
 
 	export default {
-		globalData: {
-			bookshelfChanged: false
-		},
 		onLaunch: function() {
 			let info = uni.getSystemInfoSync()
 			info.versionCode = 0
-			info.version = "v1.0.0"
+			info.version = config.info.version
+			info.appVersion = config.info.version
+			info.bookshelfChanged = false
+
+			if (info.model && info.model.indexOf('iPhone') !== -1) {
+				info.titleBarHeight = 44
+			} else {
+				info.titleBarHeight = 48
+			}
+
+			// 新版小程序升级检测
+			// #ifdef MP-WEIXIN
+			if (uni.canIUse('getUpdateManager')) {
+				const updateManager = uni.getUpdateManager()
+				updateManager.onCheckForUpdate(function(res) {
+					if (res.hasUpdate) {
+						updateManager.onUpdateReady(function() {
+							uni.showModal({
+								title: '升级提示',
+								content: '新版本已经为您准备就绪，是否升级应用？',
+								success: function(res) {
+									if (res.confirm) updateManager.applyUpdate()
+								}
+							})
+						})
+					}
+				})
+			}
+			// #endif
 
 			// #ifdef APP-PLUS
 			// 查询版本信息
@@ -26,7 +51,7 @@
 							if (config.debug) console.log("当前版本", info.versionCode, "最新版本", res.data.version)
 							if (info.versionCode < res.data.version) {
 								uni.showModal({
-									title: "高能预警",
+									title: "温馨提示",
 									content: "发现新版本APP，您是否要升级体验？",
 									cancelText: "暂时忽略",
 									confirmText: "码上升级",
@@ -48,7 +73,10 @@
 			});
 			// #endif
 
-			if (config.debug) console.log(info)
+			if (config.debug) {
+				console.log(info)
+				console.log('platform', info.platform)
+			}
 			util.setSysInfo(info)
 		},
 		onShow: function() {
@@ -56,7 +84,7 @@
 		},
 		onHide: function() {
 			if (config.debug) console.log('App Hide')
-		}
+		},
 	}
 </script>
 

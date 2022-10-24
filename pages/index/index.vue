@@ -1,14 +1,16 @@
 <template>
 	<view class="root">
-		<view v-if="showSearch" class="base-padding mgb-30upx">
+		<iheader :showIcon="false" :showSearch="showHeaderSearch"></iheader>
+		<view v-if="showSearch" class="base-padding mgb-30">
 			<search target="/pages/search/search" />
 		</view>
 
 		<view v-if="banners.length>0" class="base-padding base-margin-bottom">
-			<swiper :style="'height:'+bannerHeight" :autoplay="autoplay" :indicator-dots="indicatorDots" :interval="interval"
-			 :duration="duration">
+			<swiper :style="'height:'+bannerHeight" :autoplay="autoplay" :indicator-dots="indicatorDots"
+				:interval="interval" :duration="duration">
 				<swiper-item v-for="banner in banners" :key="banner.id" class="radius-basic">
-					<image @click="bannerClick" :data-url="banner.link" :src="banner.image" :style="'height:'+bannerHeight+';width:'+bannerWidth"></image>
+					<image @click="bannerClick" :data-url="banner.link" :src="banner.image"
+						:style="'height:'+bannerHeight+';width:'+bannerWidth+';min-width:100%;max-width:100%'"></image>
 				</swiper-item>
 			</swiper>
 		</view>
@@ -16,19 +18,31 @@
 		<!--  推荐  -->
 		<view v-if="recommendBooks.length>0" class='panel base-padding recommend base-margin-bottom'>
 			<view class='panel-heading'>
-				<view class='panel-title font-lv1 strong'>最新推荐</view>
+				<view class='panel-title font-lv1 strong'>
+					<text>最新推荐</text>
+					<navigator class="history-link color-grey" url="/pages/history/history">最近阅读</navigator>
+				</view>
 			</view>
 			<view class='panel-body'>
 				<scroll-book :books="recommendBooks" :width="bannerWidth"></scroll-book>
 			</view>
 		</view>
 
+		<!-- showAd: 内容加载完成再显示广告，避免广告先于内容显示 -->
+		<!-- #ifdef MP-WEIXIN -->
+		<view v-if="showAd && !adClosed" :class="['base-padding', adLoaded ? 'base-margin-bottom': '']">
+			<ad @close="adClose" @load="adLoad" :unit-id="bannerAdUnitId" ad-intervals="30"></ad>
+		</view>
+		<!-- #endif -->
+
+
 		<!--  各种分类的书籍的展示  -->
 		<block v-for="category in categoryBooks" :key="category.id">
 			<view v-if="category.books" class='panel base-padding base-margin-bottom'>
 				<view class='panel-heading'>
 					<view class='panel-title font-lv1 strong'>{{category.title}}
-						<navigator :url="'/pages/list/list?tab=new&cid='+category.id" class='pull-right color-link font-lv3'>更多</navigator>
+						<navigator :url="'/pages/list/list?tab=new&cid='+category.id"
+							class='pull-right color-link font-lv3'>更多</navigator>
 					</view>
 				</view>
 				<view class='panel-body'>
@@ -36,16 +50,15 @@
 				</view>
 			</view>
 		</block>
-
+		<view v-if="platform == 'ios'" class="ios-platform">.</view>
 	</view>
-
-
 </template>
 
 <script>
 	import scrollBook from '../../components/scrollBook.vue'
 	import search from '../../components/search.vue'
 	import listBook from '../../components/listBook.vue'
+	import iheader from '../../components/header.vue'
 
 	import api from '../../utils/api.js'
 	import util from '../../utils/util.js'
@@ -56,9 +69,11 @@
 			scrollBook,
 			search,
 			listBook,
+			iheader,
 		},
 		data() {
 			return {
+				bannerRatio: 2.619,
 				indicatorDots: true,
 				autoplay: true,
 				interval: 3000,
@@ -66,33 +81,63 @@
 				bannerWidth: '100%',
 				bannerHeight: 'auto',
 				showSearch: false, // 内容完全加载完成之后再显示搜索框
+				showHeaderSearch: false,
 				banners: [],
 				categoryBooks: [],
 				recommendBooks: [],
-				times: 100, // 当iOS未允许访问网络的时候，没3秒请求一次数据
+				times: 100, // 当iOS未允许访问网络的时候，每3秒请求一次数据
+				platform: '',
+				bannerAdUnitId: config.bannerAdUnitId,
+				showAd: false,
+				adLoaded: false,
+				adClosed: false,
 			}
 		},
 		onLoad() {
-			let info = util.getSysInfo()
-			// this.bannerWidth = info.bannerWidth + "px"
-			// this.bannerHeight = info.bannerHeight + "px"
-			// if (config.debug) console.log(this.bannerWidth, this.bannerHeight)
+			util.loading('loading...')
 			this.loadData()
+		},
+		onShareAppMessage: function() {
+			uni.showShareMenu({
+				withShareTicket: true
+			})
 		},
 		onShow() {
 			if (this.categoryBooks.length == 0) {
 				this.loadData()
 			}
 		},
+		onPageScroll(options) {
+			if (config.debug) console.log("onPageScroll", options)
+			if (options.scrollTop > 110) {
+				if (this.showHeaderSearch == false) this.showHeaderSearch = true
+			} else {
+				if (this.showHeaderSearch == true) this.showHeaderSearch = false
+			}
+		},
+		onResize(e) {
+			let that = this
+			let info = uni.getSystemInfoSync()
+			let oriInfo = util.getSysInfo()
+			let newInfo = {...oriInfo, ...info}
+			util.setSysInfo(newInfo)
+			// 重新计算横幅的宽高
+			let bannerWidth = parseFloat(that.bannerWidth.split("px")[0])*((e.size.windowWidth-30)/ e.size.windowHeight)
+			that.bannerWidth = bannerWidth + 'px'
+			that.bannerHeight = (bannerWidth / that.bannerRatio) + 'px'
+		},
 		methods: {
+			adLoad() {
+				this.adLoaded = true
+			},
+			adClose() {
+				this.adClosed = true
+			},
 			loadData() {
-				// #ifdef MP
-				util.loading('玩命加载中...')
-				// #endif
-
 				let that = this
 				let cids = []
 				let categories = []
+				let bookLists = []
 				api.getCategories().then(function(res) {
 					if (res.length > 0) {
 						categories = res.filter(function(category) {
@@ -107,7 +152,6 @@
 				}).finally(function() {
 					let banners = []
 					let recommendBooks = []
-					let bookLists = []
 					Promise.all([util.request(config.api.banners), util.request(config.api.bookLists, {
 						page: 1,
 						size: 12,
@@ -124,15 +168,20 @@
 
 							// 计算横幅合适的宽高
 							// 转成 upx，因为两边边距设置为 30upx
-							let size = resBanners.data.size || 2.619
+							let bannerRatio = resBanners.data.size || 2.619
 							let info = util.getSysInfo()
-							let width = info.windowWidth * info.pixelRatio - 60
-							let height = width / size
+							let width = info.windowWidth * info.pixelRatio - 30
+							let height = width / bannerRatio
+							that.platform = info.platform || ''
+							that.platform = that.platform.toLowerCase()
 							that.bannerWidth = width / info.pixelRatio + "px"
 							that.bannerHeight = height / info.pixelRatio + "px"
+							that.bannerRatio = bannerRatio
 						}
-						if (resRecommendBooks.data && resRecommendBooks.data.books) recommendBooks = resRecommendBooks.data.books
+						if (resRecommendBooks.data && resRecommendBooks.data.books) recommendBooks =
+							resRecommendBooks.data.books
 						if (resBookLists.data && resBookLists.data.books) {
+							bookLists = resBookLists.data.books
 							categories = categories.map(function(category) {
 								let book = resBookLists.data.books[category.id]
 								if (book != undefined && book.length > 0) {
@@ -145,13 +194,10 @@
 						}
 					}).catch(function(e) {
 						console.log(e)
+						util.toastError(e.data.message || e.errMsg)
 					}).finally(function() {
-						that.banners = banners
-						that.categoryBooks = categories
-						that.recommendBooks = recommendBooks
-						that.showSearch = true
 						uni.hideLoading()
-						if (that.times > 0 && (!categories || categories.length == 0)) {
+						if (that.times > 0 && bookLists.length == 0) {
 							if (config.debug) console.log("reload")
 							let iload = setTimeout(function() {
 								clearTimeout(iload)
@@ -161,6 +207,11 @@
 						} else {
 							that.times = 0
 						}
+						that.banners = banners
+						that.categoryBooks = categories
+						that.recommendBooks = recommendBooks
+						that.showSearch = true
+						that.showAd = that.bannerAdUnitId != ''
 					})
 				})
 			},
@@ -193,5 +244,14 @@
 </script>
 
 <style>
+	.ios-platform {
+		color: transparent;
+		height: 1upx;
+		overflow: hidden;
+	}
 
+	.history-link {
+		display: inline-block;
+		margin-left: 30px;
+	}
 </style>

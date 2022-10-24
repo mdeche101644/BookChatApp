@@ -1,5 +1,6 @@
 <template>
 	<view>
+		<iheader :title="'目录 · '+ book.book_name"></iheader>
 		<imenu :book="book" :wd="wd" :menu="menuTree" :token="token" :result="result" 
 		@search="search" 
 		@itemClick="itemClick"
@@ -14,11 +15,13 @@
 	import api from '../../utils/api.js'
 
 	import imenu from '../../components/menu.vue'
+	import iheader from '../../components/header.vue'
 
 
 	export default {
 		components: {
-			imenu
+			imenu,
+			iheader,
 		},
 		data() {
 			return {
@@ -32,6 +35,7 @@
 			}
 		},
 		onLoad: function(options) {
+			util.loading("loading...")
 			let identify = options.id || options.identify;
 			if (!identify || identify == undefined) {
 				if (config.debug){
@@ -82,6 +86,7 @@
 				}).catch(function(e) {
 					console.log(e)
 				}).finally(function() {
+					uni.hideLoading()
 					if (menu.length == 0) {
 						uni.redirectTo({
 							url: '/pages/notfound/notfound',
@@ -91,7 +96,6 @@
 					that.menuTree = util.menuToTree(menu)
 					that.book =  book
 					that.title = '目录 · ' + book.book_name
-					uni.hideLoading()
 				})
 			},
 			itemClick: function(e) {

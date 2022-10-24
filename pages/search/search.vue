@@ -1,10 +1,11 @@
 <template>
 	<view>
-		<view class='search base-padding mgb-30upx'>
+		<iheader :title="title"></iheader>
+		<view class='search base-padding mgb-30'>
 			<search @search="search" :focus="focus" @clear="clear" :wd="wd" />
 		</view>
 
-		<view v-if="showTab" class="mgb-30upx">
+		<view v-if="showTab" class="mgb-30">
 			<tab @tabClick="tabClick" :tabs="tabs" :tabGridLen="6" :activeTab="tabValue" />
 		</view>
 
@@ -41,6 +42,7 @@
 	import search from '../../components/search.vue'
 	import listBook from '../../components/listBook.vue'
 	import tab from '../../components/tab.vue'
+	import iheader from '../../components/header.vue'
 
 	import api from '../../utils/api.js'
 	import util from '../../utils/util.js'
@@ -51,13 +53,15 @@
 			loading,
 			listBook,
 			search,
-			tab
+			tab,
+			iheader,
 		},
 		data() {
 			return {
 				tips: '',
 				lists: [],
 				wd: '',
+				title: '搜索',
 				page: 1,
 				size: 10,
 				tabValue: "book",
@@ -82,9 +86,15 @@
 				this.focus = true
 				return
 			}
+			util.loading("loading...")
 			this.wd = wd
 			this.showTab = true
 			this.execSearch()
+		},
+		onShareAppMessage: function() {
+			uni.showShareMenu({
+				withShareTicket: true
+			})
 		},
 		onReachBottom() {
 			this.execSearch()
@@ -127,9 +137,10 @@
 				
 				that.showTab = true
 				
-				uni.setNavigationBarTitle({
-					title: this.wd+" · 搜索"
-				})
+				that.title = that.wd+" · 搜索"
+				// uni.setNavigationBarTitle({
+				// 	title: this.wd+" · 搜索"
+				// })
 				
 				if (that.pedding) return
 
@@ -180,6 +191,7 @@
 					that.tips = e.data.message || e.errMsg
 					that.page = 0
 				}).finally(function() {
+					uni.hideLoading()
 					that.pending = false
 				})
 			},
@@ -189,38 +201,36 @@
 
 <style scoped>
 	.doc-info {
-		font-size: 24upx;
-		margin: 20upx 0;
+		font-size: 12px;
+		margin: 10px 0;
 	}
 
 	.doc-info image {
-		height: 20upx;
-		width: 20upx;
-		margin-right: 6upx;
+		height: 10px;
+		width: 10px;
+		margin-right: 3px;
 	}
 
 	.doc-info .item {
 		display: inline-block;
-		margin-right: 16upx;
+		margin-right: 8px;
 	}
 
 	.doc-intro {
-		font-size: 28upx;
+		font-size: 14px;
 		line-height: 170%;
 	}
 
 	.doc-list .row {
 		border-bottom: 1px solid #efefef;
-		margin-bottom: 30upx;
-		padding-bottom: 30upx;
+		margin-bottom: 15px;
+		padding-bottom: 15px;
 	}
 	@media (min-width: 768px) {
 		.doc-info image {
 			max-height: 18px;
 			max-width: 18px;
 			margin-right: 6px;
-			position: relative;
-			top: 3px;
 		}
 	}
 </style>
